@@ -130,6 +130,30 @@ Background jobs run the headless turn in a detached process, streaming output to
 | `GROK_BIN` | Path to the `grok` binary if it isn't named `grok` on `PATH`. |
 | `GROK_CC_STATE_DIR` | Override the background-job state directory (used by tests). |
 
+## Cross-harness: install in Grok too
+
+This plugin follows the shared plugin spec, so it installs into **Grok Build** as a native plugin as well as into Claude Code. Grok reads Claude-format marketplaces, scans `~/.claude/skills/`, honors `~/.claude/settings.json`, and maps a plugin's `commands/` into its own skill/slash-command system. Verified with `grok plugin validate` and a full install cycle.
+
+```bash
+# Validate against Grok's plugin spec
+grok plugin validate ./plugins/grok
+
+# Install locally into Grok (trusts hooks/MCP)
+grok plugin install ./plugins/grok --trust
+
+# Or from a published repo / marketplace
+grok plugin install <your-org>/grok-plugin-cc#plugins/grok --trust
+grok plugin marketplace add <your-org>/grok-plugin-cc
+
+grok plugin list          # confirm it's installed
+grok inspect              # see its skills/agents/commands (tagged `plugin: grok`)
+grok plugin uninstall grok --confirm
+```
+
+When installed, Grok surfaces the `grok-runtime` skill, the `grok-rescue` agent, and the `search`/`review`/`rescue`/`setup`/`status`/`result`/`cancel` commands.
+
+> **Note:** the plugin's primary purpose is to bring Grok *into Claude Code*. Inside Grok itself, the search/review capabilities are largely native already, and the companion shells out to `grok -p` (a nested Grok run). Installing it in Grok is mainly useful for format parity and multi-harness/team marketplaces — delegating between Grok, Codex, and Gemini from whichever harness you're in.
+
 ## Development
 
 ```bash
