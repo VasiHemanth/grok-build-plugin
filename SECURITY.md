@@ -4,7 +4,7 @@
 
 Please **do not** open a public issue for security problems.
 
-Instead, report privately via [GitHub Security Advisories](https://github.com/<your-org>/grok-mcp/security/advisories/new) (preferred) or email the maintainer listed in the repository profile. We aim to acknowledge reports within a few days.
+Instead, report privately via [GitHub Security Advisories](https://github.com/VasiHemanth/grok-mcp/security/advisories/new) (preferred) or email the maintainer listed in the repository profile. We aim to acknowledge reports within a few days.
 
 ## Scope and threat model
 

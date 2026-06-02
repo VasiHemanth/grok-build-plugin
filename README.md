@@ -28,7 +28,7 @@ Grok Build has native, real-time access to X and the web — strong for breaking
 Add the marketplace in Claude Code:
 
 ```bash
-/plugin marketplace add <your-org>/grok-mcp
+/plugin marketplace add VasiHemanth/grok-mcp
 ```
 
 Install the plugin:
@@ -164,8 +164,8 @@ grok plugin validate ./plugins/grok
 grok plugin install ./plugins/grok --trust
 
 # Or from a published repo / marketplace
-grok plugin install <your-org>/grok-mcp#plugins/grok --trust
-grok plugin marketplace add <your-org>/grok-mcp
+grok plugin install VasiHemanth/grok-mcp#plugins/grok --trust
+grok plugin marketplace add VasiHemanth/grok-mcp
 
 grok plugin list          # confirm it's installed
 grok inspect              # see its skills/agents/commands (tagged `plugin: grok`)

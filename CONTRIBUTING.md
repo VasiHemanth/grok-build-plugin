@@ -11,7 +11,7 @@ Thanks for your interest in improving grok-mcp! This is a community project.
 ## Development setup
 
 ```bash
-git clone https://github.com/<your-org>/grok-mcp.git
+git clone https://github.com/VasiHemanth/grok-mcp.git
 cd grok-mcp
 npm test        # runs the unit + MCP smoke tests (no Grok account required)
 ```
