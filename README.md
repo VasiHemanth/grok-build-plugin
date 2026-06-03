@@ -170,7 +170,7 @@ Tested live with the `npx github:` launch: **OpenAI Codex** (called `grok_search
 
 MCP clients resolve plugin paths differently. Claude Code and Grok substitute `${CLAUDE_PLUGIN_ROOT}`, but **Codex does not**, so a `${CLAUDE_PLUGIN_ROOT}`-based manifest fails there. Launching from the repo with `npx -y github:VasiHemanth/grok-mcp` sidesteps all of it: npm hands every harness a correct absolute path, and the server resolves its own imports relative to itself (not the working directory). One manifest, every agent, one repo, no publish step.
 
-> The first launch clones the repo (a few seconds); after that npm caches it. If you later want faster cold starts, you can publish the server to the npm registry under a scoped name (`@your-npm-user/grok-mcp`, since bare `grok-mcp` is taken) and switch the `args` to `["-y", "@your-npm-user/grok-mcp"]`.
+> The first launch clones the repo (a few seconds); after that npm caches it. For faster cold starts you can publish the server to the npm registry as **`grok-build-x-search-mcp`** and switch every `args` to `["-y", "grok-build-x-search-mcp"]`. Publishing is automated: push a `v*` git tag and the `publish.yml` workflow runs `npm publish` (needs an `NPM_TOKEN` repo secret). The npm package name is `grok-build-x-search-mcp` because `grok-mcp` and `grok-build-mcp` are both taken; the repo and plugin stay `grok-mcp`.
 
 ## Cross-harness: install in Grok too
 

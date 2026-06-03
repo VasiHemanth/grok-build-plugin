@@ -1,5 +1,5 @@
 {
-  "name": "grok-mcp",
+  "name": "grok-build-x-search-mcp",
   "version": "0.1.0",
   "description": "One repo: a Claude Code / Grok plugin plus a grok_search MCP server that gives any coding agent (Claude Code, Codex, Cursor) live X (Twitter) and web search via your Grok Build CLI.",
   "type": "module",
@@ -14,7 +14,7 @@
   },
   "homepage": "https://github.com/VasiHemanth/grok-mcp#readme",
   "bin": {
-    "grok-mcp": "plugins/grok/scripts/grok-mcp.mjs"
+    "grok-build-x-search-mcp": "plugins/grok/scripts/grok-mcp.mjs"
   },
   "files": [
     "plugins/grok/scripts/grok-mcp.mjs",

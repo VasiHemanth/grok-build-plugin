@@ -1,0 +1,23 @@
+name: Publish to npm
+
+# Publishes the MCP server package (grok-build-x-search-mcp) to the npm registry
+# when you push a version tag, e.g. `git tag v0.1.0 && git push --tags`.
+# Requires an `NPM_TOKEN` repository secret (npm automation token).
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+      - run: npm test
+      - run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
