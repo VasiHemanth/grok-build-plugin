@@ -25,7 +25,7 @@
     "node": ">=18.18"
   },
   "scripts": {
-    "test": "node --test \"tests/*.test.mjs\""
+    "test": "node --test tests/mcp.test.mjs tests/runtime.test.mjs"
   },
   "keywords": [
     "mcp",
