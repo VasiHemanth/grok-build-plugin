@@ -27,7 +27,7 @@ Works today in any MCP-capable agent, no install or publish step. You just need 
 // drop into your agent's MCP config (see the per-agent table below for the path)
 {
   "mcpServers": {
-    "grok": { "command": "npx", "args": ["-y", "github:VasiHemanth/grok-mcp"] }
+    "grok": { "command": "npx", "args": ["-y", "grok-build-x-search-mcp"] }
   }
 }
 ```
@@ -35,7 +35,7 @@ Works today in any MCP-capable agent, no install or publish step. You just need 
 Or one line for **OpenAI Codex**:
 
 ```bash
-codex mcp add grok -- npx -y github:VasiHemanth/grok-mcp
+codex mcp add grok -- npx -y grok-build-x-search-mcp
 ```
 
 Then just ask your agent to "search X for ..." and it will call `grok_search`. Verified live in Codex, Antigravity (`agy`), and Gemini CLI. Full per-agent paths are in [Per-agent setup](#per-agent-setup).
@@ -167,7 +167,7 @@ For Claude Code and Grok, the bundled plugin wires it up automatically. For any 
   "mcpServers": {
     "grok": {
       "command": "npx",
-      "args": ["-y", "github:VasiHemanth/grok-mcp"]
+      "args": ["-y", "grok-build-x-search-mcp"]
     }
   }
 }
@@ -179,19 +179,21 @@ Then the agent can call `grok_search(query)` on its own whenever it needs curren
 
 | Agent | How to add | Config location |
 | --- | --- | --- |
-| **OpenAI Codex** | `codex mcp add grok -- npx -y github:VasiHemanth/grok-mcp` | `~/.codex/config.toml` |
+| **OpenAI Codex** | `codex mcp add grok -- npx -y grok-build-x-search-mcp` | `~/.codex/config.toml` |
 | **Gemini CLI** | add the JSON block above under `mcpServers` | `~/.gemini/settings.json` |
 | **Antigravity (`agy`)** | add the JSON block above under `mcpServers` | `~/.gemini/config/mcp_config.json` (or workspace `.agents/mcp_config.json`) |
 | **Cursor** | add the JSON block above | `~/.cursor/mcp.json` |
 | **Claude Code / Grok** | install the plugin (auto-wired) | bundled `.mcp.json` |
 
-Tested live with the `npx github:` launch: **OpenAI Codex** (called `grok_search`, returned a live sourced answer), **Antigravity (`agy`)** (same live answer), **Gemini CLI** (sourced answer), plus the standalone server handshake. Any other MCP client (Cursor, opencode, Copilot) uses the same JSON config.
+Tested live with the `npx` launch (both `github:` during development and the published `grok-build-x-search-mcp`): **OpenAI Codex**, **Antigravity (`agy`)**, **Gemini CLI**, plus the standalone server handshake. Any other MCP client (Cursor, opencode, Copilot) uses the same JSON config.
 
-### Why `npx github:...` instead of a file path
+### Why `npx grok-build-x-search-mcp` (preferred) or `npx github:...`
 
-MCP clients resolve plugin paths differently. Claude Code and Grok substitute `${CLAUDE_PLUGIN_ROOT}`, but **Codex does not**, so a `${CLAUDE_PLUGIN_ROOT}`-based manifest fails there. Launching from the repo with `npx -y github:VasiHemanth/grok-mcp` sidesteps all of it: npm hands every harness a correct absolute path, and the server resolves its own imports relative to itself (not the working directory). One manifest, every agent, one repo, no publish step.
+MCP clients resolve plugin paths differently. Claude Code and Grok substitute `${CLAUDE_PLUGIN_ROOT}`, but **Codex does not**, so a `${CLAUDE_PLUGIN_ROOT}`-based manifest fails there. Using the published package (`npx -y grok-build-x-search-mcp`) or `npx -y github:VasiHemanth/grok-mcp` sidesteps all of it: npm hands every harness a correct absolute path, and the server resolves its own imports relative to itself (not the working directory). One manifest, every agent.
 
-> The first launch clones the repo (a few seconds); after that npm caches it. For faster cold starts you can publish the server to the npm registry as **`grok-build-x-search-mcp`** and switch every `args` to `["-y", "grok-build-x-search-mcp"]`. Publishing is automated: push a `v*` git tag and the `publish.yml` workflow runs `npm publish` (needs an `NPM_TOKEN` repo secret). The npm package name is `grok-build-x-search-mcp` because `grok-mcp` and `grok-build-mcp` are both taken; the repo and plugin stay `grok-mcp`.
+The published package on npm gives the fastest cold start (no git clone). The `github:` form still works as a fallback / for development and always points at the latest from the repo.
+
+> Publishing the MCP server part to npm as `grok-build-x-search-mcp` (distinct from the plugin marketplace name) is now complete for v0.1.0+. The repo and the Claude/Grok *plugin* remain under `grok-mcp` on GitHub for marketplace installs.
 
 ## Cross-harness: install in Grok too
 

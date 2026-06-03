@@ -2,7 +2,7 @@
   "mcpServers": {
     "grok": {
       "command": "npx",
-      "args": ["-y", "github:VasiHemanth/grok-mcp"]
+      "args": ["-y", "grok-build-x-search-mcp"]
     }
   }
 }
