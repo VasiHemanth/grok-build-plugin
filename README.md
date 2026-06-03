@@ -1,5 +1,7 @@
 # grok-mcp: Grok Build for any coding agent
 
+> Want Claude Code, Codex, or Cursor to drive Grok Build? If you already pay for a Grok subscription, this gives any of those agents live X search and data right in their context. A couple of ways to wire it up.
+
 Bring **Grok Build's live X (Twitter) + web search** (and its coding agent) into the tools you already use. Two ways to consume it:
 
 - **An MCP tool (`grok_search`)**: works in **any MCP-capable agent**: Claude Code, OpenAI Codex, Cursor, and others. This is the cross-agent, real-time-search core.
