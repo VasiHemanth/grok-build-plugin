@@ -164,7 +164,7 @@ Then the agent can call `grok_search(query)` on its own whenever it needs curren
 | **Cursor** | add the JSON block above | `~/.cursor/mcp.json` |
 | **Claude Code / Grok** | install the plugin (auto-wired) | bundled `.mcp.json` |
 
-Tested live with the `npx github:` launch: **OpenAI Codex** (Codex called `grok_search` and returned a live, sourced answer), **Gemini CLI** (returned a sourced answer), and the standalone server handshake. Any other MCP client (Cursor, opencode, Copilot, Antigravity) uses the same JSON config.
+Tested live with the `npx github:` launch: **OpenAI Codex** (called `grok_search`, returned a live sourced answer), **Antigravity (`agy`)** (same live answer), **Gemini CLI** (sourced answer), plus the standalone server handshake. Any other MCP client (Cursor, opencode, Copilot) uses the same JSON config.
 
 ### Why `npx github:...` instead of a file path
 
