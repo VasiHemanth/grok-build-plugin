@@ -136,23 +136,27 @@ Background jobs run the headless turn in a detached process, streaming output to
 
 ## Use the search tool from any agent (MCP)
 
-The `grok_search` tool lives in one file, `plugins/grok/scripts/grok-mcp.mjs`, a dependency-free MCP server (JSON-RPC over stdio). When you install the plugin in Claude Code or Grok, it's wired up automatically via `.mcp.json`. Any **other** MCP-capable agent can use the exact same file by pointing its own MCP config at it:
+`grok_search` is a dependency-free MCP server (JSON-RPC over stdio), published to npm so any agent can launch it with `npx`. No paths, no plugin variables, no build step.
+
+For Claude Code and Grok, the bundled plugin wires it up automatically. For any other MCP-capable agent, add this to its MCP config:
 
 ```jsonc
-// e.g. OpenAI Codex / Cursor MCP config
+// OpenAI Codex (~/.codex/config.toml uses TOML; others use JSON like this)
 {
   "mcpServers": {
     "grok": {
-      "command": "node",
-      "args": ["/absolute/path/to/grok-mcp/plugins/grok/scripts/grok-mcp.mjs"]
+      "command": "npx",
+      "args": ["-y", "grok-x-search-mcp"]
     }
   }
 }
 ```
 
-Then the agent can call `grok_search(query)` on its own whenever it needs current information. It returns a synthesized answer plus a Sources list (including `x.com` links). The tool is read-only (Grok is restricted to `web_search`/`web_fetch`).
+Then the agent can call `grok_search(query)` on its own whenever it needs current information. It returns a synthesized answer plus a Sources list (including `x.com` links). The tool is read-only (Grok is restricted to `web_search`/`web_fetch`). It uses your local `grok` CLI, so you must have it installed and signed in.
 
-> MCP is a vendor-neutral protocol, but each host has its own config format and its own subset of features, so the same server works across hosts with a little per-host setup, not zero-config everywhere. (Codex and Cursor support MCP today; check your agent's docs.)
+### Why `npx` instead of a file path
+
+MCP clients resolve plugin paths differently. Claude Code and Grok substitute `${CLAUDE_PLUGIN_ROOT}`, but **Codex does not**, so a `${CLAUDE_PLUGIN_ROOT}`-based manifest fails there. `npx -y grok-x-search-mcp` sidesteps all of it: npm hands every harness the correct absolute path, and the server resolves its own imports relative to itself (not the working directory). One manifest, every agent. (The npm package is `grok-x-search-mcp` because `grok-mcp` was already taken on npm; the repo and plugin are still `grok-mcp`.)
 
 ## Cross-harness: install in Grok too
 

@@ -1,7 +1,7 @@
 {
-  "name": "grok-mcp",
+  "name": "grok-x-search-mcp",
   "version": "0.1.0",
-  "description": "Use Grok Build's live X/web search and coding agent from any MCP-capable coding agent (Claude Code, Codex, Cursor) plus a native Claude Code plugin.",
+  "description": "MCP server that gives any coding agent (Claude Code, Codex, Cursor) live X (Twitter) and web search via your Grok Build CLI. Part of the grok-mcp project.",
   "type": "module",
   "private": false,
   "license": "Apache-2.0",
@@ -13,6 +13,14 @@
     "url": "https://github.com/VasiHemanth/grok-mcp/issues"
   },
   "homepage": "https://github.com/VasiHemanth/grok-mcp#readme",
+  "bin": {
+    "grok-x-search-mcp": "plugins/grok/scripts/grok-mcp.mjs"
+  },
+  "files": [
+    "plugins/grok/scripts/grok-mcp.mjs",
+    "plugins/grok/scripts/lib/",
+    "NOTICE"
+  ],
   "engines": {
     "node": ">=18.18"
   },
