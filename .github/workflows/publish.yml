@@ -38,18 +38,21 @@ jobs:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: "22"
           registry-url: "https://registry.npmjs.org"
       - name: Configure registry for OIDC only (override any token auth from setup-node)
         run: |
+          rm -f $NPM_CONFIG_USERCONFIG || true
           echo "registry=https://registry.npmjs.org/" > $NPM_CONFIG_USERCONFIG
           echo "always-auth=true" >> $NPM_CONFIG_USERCONFIG
       - run: npm test
       # Pure OIDC publish via the Trusted Publisher registered on npm.
       # No NODE_AUTH_TOKEN / NPM_TOKEN secret is used.
       - run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ''
       - name: Confirm published version
         run: npm view grok-build-x-search-mcp version

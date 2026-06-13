@@ -14,7 +14,7 @@ import process from "node:process";
 import { runGrokTurn } from "./lib/grok.mjs";
 import { buildSearchPrompt } from "./lib/prompts.mjs";
 
-const SERVER_INFO = { name: "grok", version: "0.1.1" };
+const SERVER_INFO = { name: "grok", version: "0.1.2" };
 const DEFAULT_PROTOCOL = "2024-11-05";
 
 // Recursion guard env var. When present, the MCP server was launched as a
