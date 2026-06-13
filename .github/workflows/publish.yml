@@ -43,16 +43,11 @@ jobs:
         with:
           node-version: "22"
           registry-url: "https://registry.npmjs.org"
-      - name: Configure registry for OIDC only (override any token auth from setup-node)
-        run: |
-          rm -f $NPM_CONFIG_USERCONFIG || true
-          echo "registry=https://registry.npmjs.org/" > $NPM_CONFIG_USERCONFIG
-          echo "always-auth=true" >> $NPM_CONFIG_USERCONFIG
       - run: npm test
-      # Pure OIDC publish via the Trusted Publisher registered on npm.
-      # No NODE_AUTH_TOKEN / NPM_TOKEN secret is used.
+      # Use token auth from secret (reliable for publish) + OIDC/Trusted Publisher as configured.
+      # The secret provides the auth that works for this package.
       - run: npm publish --access public --provenance
         env:
-          NODE_AUTH_TOKEN: ''
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Confirm published version
         run: npm view grok-build-x-search-mcp version
