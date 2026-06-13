@@ -14,8 +14,13 @@ import process from "node:process";
 import { runGrokTurn } from "./lib/grok.mjs";
 import { buildSearchPrompt } from "./lib/prompts.mjs";
 
-const SERVER_INFO = { name: "grok", version: "0.1.0" };
+const SERVER_INFO = { name: "grok", version: "0.1.1" };
 const DEFAULT_PROTOCOL = "2024-11-05";
+
+// Recursion guard env var. When present, the MCP server was launched as a
+// child of a grok_search turn. We refuse to serve the grok_search tool to
+// break the fork-bomb loop (child Grok seeing the bridge in its own config).
+const RECURSION_GUARD = "GROK_SEARCH_MCP_RECURSION_GUARD";
 
 const TOOLS = [
   {
@@ -64,12 +69,28 @@ async function handle(message) {
     case "ping":
       return ok(id, {});
     case "tools/list":
+      if (process.env[RECURSION_GUARD]) {
+        // Child session from within a grok_search turn: advertise no tools
+        // so the inner Grok cannot discover and call grok_search again.
+        return ok(id, { tools: [] });
+      }
       return ok(id, { tools: TOOLS });
     case "tools/call": {
       const name = params?.name;
       if (name !== "grok_search") {
         return fail(id, -32602, `Unknown tool: ${name}`);
       }
+
+      // Guard against recursion: if this MCP server itself was started by an
+      // inner grok (because the child saw the bridge in its MCP config), refuse
+      // the tool call. This is the primary fix for the fork-bomb (issue #1).
+      if (process.env[RECURSION_GUARD]) {
+        return ok(id, {
+          content: [{ type: "text", text: "Error: grok_search recursion guard active. Recursive calls from inside a grok_search session are blocked to prevent fork-bombs." }],
+          isError: true
+        });
+      }
+
       const query = String(params?.arguments?.query ?? "").trim();
       if (!query) {
         return ok(id, { content: [{ type: "text", text: "Error: 'query' is required." }], isError: true });
@@ -78,7 +99,8 @@ async function handle(message) {
         const r = await runGrokTurn(process.cwd(), {
           prompt: buildSearchPrompt(query),
           tools: ["web_search", "web_fetch"],
-          alwaysApprove: true
+          alwaysApprove: true,
+          env: { [RECURSION_GUARD]: "1" }
         });
         const text = r.text?.trim() || "(no result returned)";
         return ok(id, { content: [{ type: "text", text }] });

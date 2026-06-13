@@ -11,7 +11,21 @@ All notable changes to this project are documented here. The format is based on
 - npm `bin` + `files` so the server runs via `npx`. Initially via `github:`, then published to the registry as `grok-build-x-search-mcp` for v0.1.0.
 - Open-source scaffolding: `NOTICE`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, CI workflow.
 
+### Fixed
+- **Critical recursion / fork-bomb in the published MCP server** (GitHub issue #1). When a `grok_search` call spawns an inner `grok -p`, the child Grok could see the `grok` MCP bridge in its merged config and recursively call the tool, leading to hundreds of processes and OOM/crashes. 
+  - Added `GROK_SEARCH_MCP_RECURSION_GUARD` env marker passed only on search turns.
+  - `grok-mcp.mjs` now returns empty tools list (or explicit error) when the guard is present.
+  - `runGrokTurn` / `runCommand` now forward custom `env`.
+  - Improved GitHub publish workflow (provenance, repo guard, clearer release instructions).
+- Users of `npx -y grok-build-x-search-mcp` will receive the fixed version automatically on next run after `v0.1.1` is tagged/published. Previously installed users should update/reinstall.
+
+## [0.1.1] - 2026-06-13
+
+### Fixed
+- Recursion guard and publish workflow improvements for the `grok_search` MCP server (see Unreleased for full details).
+
 ### Changed
+- Renamed the GitHub repository from `grok-mcp` to `grok-build-plugin` for clarity (the old URL web-redirects). The Claude/Grok plugin is named `grok`; the npm package is `grok-build-x-search-mcp`.
 - `.mcp.json` (and README examples) launch the server with `npx -y grok-build-x-search-mcp` (registry for speed) or `github:` fallback. `npx` is harness-neutral (works where `${CLAUDE_PLUGIN_ROOT}` doesn't, e.g. Codex). Verified in Codex, agy, Gemini.
 
 ## [0.1.0] - 2026-06-03

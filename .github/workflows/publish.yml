@@ -1,8 +1,23 @@
 name: Publish to npm
 
 # Publishes the MCP server package (grok-build-x-search-mcp) to the npm registry
-# when you push a version tag, e.g. `git tag v0.1.0 && git push --tags`.
-# Requires an `NPM_TOKEN` repository secret (npm automation token).
+# when you push a version tag, e.g. `git tag v0.1.1 && git push --tags`.
+#
+# How to release (fixes + new features):
+#   1. Make changes + bump version in package.json + update CHANGELOG.md
+#   2. git commit -am "chore(release): v0.1.1 - recursion guard + publish improvements"
+#   3. git tag v0.1.1
+#   4. git push && git push --tags
+#
+# This workflow will:
+# - Run tests
+# - Publish to https://www.npmjs.com/package/grok-build-x-search-mcp
+# - Existing npx users (`npx -y grok-build-x-search-mcp`) automatically get the new version on their next run.
+# - Users with a previously installed/cached version must run `npm update -g grok-build-x-search-mcp` or reinstall.
+# - No automatic push/email notification to end users. Announce via GitHub Release (recommended), updated README/CHANGELOG, and any social channels.
+#
+# Requires an `NPM_TOKEN` repository secret (npm automation token with "Packages: Write" permission).
+# For stronger security, also configure OIDC trusted publishing on npm for the package (then you can remove the token for publish).
 
 on:
   push:
@@ -11,6 +26,13 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # Only the real repo can publish (protects forks).
+    if: github.repository == 'VasiHemanth/grok-build-plugin'
+
+    permissions:
+      contents: read
+      id-token: write   # Enables npm provenance / trusted publishing (recommended)
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -18,6 +40,8 @@ jobs:
           node-version: "20"
           registry-url: "https://registry.npmjs.org"
       - run: npm test
-      - run: npm publish --access public
+      - run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Confirm published version
+        run: npm view grok-build-x-search-mcp version

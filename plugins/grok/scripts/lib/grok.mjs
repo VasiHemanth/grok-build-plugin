@@ -170,7 +170,7 @@ export function parseJsonResult(stdout) {
  * @param {string} cwd
  * @param {object} options - prompt, model, effort, tools, disallowedTools,
  *   allow, deny, permissionMode, sessionId, resumeSessionId, continueLast,
- *   alwaysApprove, rules, signal, onProgress, defaultPrompt
+ *   alwaysApprove, rules, signal, onProgress, defaultPrompt, env
  */
 export async function runGrokTurn(cwd, options = {}) {
   const availability = getGrokAvailability(cwd);
@@ -221,6 +221,7 @@ export async function runGrokTurn(cwd, options = {}) {
   const { code, stdout, stderr } = await runCommand(grokBinary(), args, {
     cwd,
     signal: options.signal,
+    env: options.env,
     onStdoutLine
   });
 
