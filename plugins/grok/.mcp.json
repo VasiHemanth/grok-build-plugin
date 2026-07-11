@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "grok": {
-      "command": "npx",
-      "args": ["-y", "grok-build-x-search-mcp"]
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/grok-mcp.mjs"]
     }
   }
 }

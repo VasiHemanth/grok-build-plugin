@@ -1,6 +1,6 @@
 {
   "name": "grok",
-  "version": "0.1.0",
+  "version": "0.1.4",
   "description": "Live X/web search, code review, and task delegation via Grok Build. Bundles a grok_search MCP tool usable by any MCP-capable coding agent.",
   "author": {
     "name": "Grok Plugin Contributors"

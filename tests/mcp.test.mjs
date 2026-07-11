@@ -69,3 +69,35 @@ test("MCP server returns a JSON-RPC error for unknown methods", async () => {
   const err = res.find((r) => r.id === 2);
   assert.equal(err.error.code, -32601);
 });
+
+test("MCP server advertises no tools when recursion guard is set", async () => {
+  const childEnv = { ...process.env, GROK_SEARCH_MCP_RECURSION_GUARD: "1" };
+  const res = await new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [SERVER], {
+      stdio: ["pipe", "pipe", "inherit"],
+      env: childEnv
+    });
+    let out = "";
+    const timer = setTimeout(() => {
+      child.kill();
+      reject(new Error("timeout"));
+    }, 5000);
+    child.stdout.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => {
+      out += chunk;
+      const lines = out.split("\n").filter((l) => l.trim());
+      if (lines.length >= 2) {
+        clearTimeout(timer);
+        child.kill();
+        resolve(lines.map((l) => JSON.parse(l)));
+      }
+    });
+    child.on("error", reject);
+    child.stdin.write(
+      `${JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2024-11-05", capabilities: {} } })}\n`
+    );
+    child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list" })}\n`);
+  });
+  const list = res.find((r) => r.id === 2);
+  assert.deepEqual(list.result.tools, []);
+});

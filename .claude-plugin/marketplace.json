@@ -5,13 +5,13 @@
   },
   "metadata": {
     "description": "Use Grok Build from your coding agent: live X/web search (via MCP, usable anywhere) plus code review and task delegation.",
-    "version": "0.1.0"
+    "version": "0.1.4"
   },
   "plugins": [
     {
       "name": "grok",
       "description": "Live X/web search, code review, and task delegation via Grok Build. Bundles an MCP search tool usable by any MCP-capable agent.",
-      "version": "0.1.0",
+      "version": "0.1.4",
       "author": {
         "name": "Grok Plugin Contributors"
       },

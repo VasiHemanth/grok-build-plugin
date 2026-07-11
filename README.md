@@ -144,7 +144,16 @@ There is no separate server or daemon. Grok manages its own session store (under
 
 - it uses the same Grok install and login you use directly,
 - sessions started here can be resumed in the Grok TUI with `grok -r <id>` (and vice versa),
-- read-only commands restrict Grok's toolset (`read_file`, `grep`, `list_dir`, `web_search`, `web_fetch`) so reviews and searches can't modify your repo.
+- read-only commands (search/review) use a **denylist** of write/shell/MCP/media tools plus
+  `--sandbox read-only` and `--no-subagents`, so Grok cannot edit your repo. They also
+  disable vendor MCP imports in the child so a search turn cannot re-enter `grok_search`
+  (fork-bomb defence; see issue #1).
+
+> **CLI note (`--tools` bug):** on grok-cli 0.2.x, `grok -p ... --tools web_search,web_fetch`
+> often fails session creation (`Requirements unsatisfied` for `run_terminal_cmd` /
+> `auto_background_on_timeout`). This plugin therefore **never** uses `--tools` for
+> search/review; it uses `--disallowed-tools` instead. Set `GROK_CC_FORCE_TOOLS_ALLOWLIST=1`
+> only if you know your CLI build has fixed allowlists.
 
 Background jobs run the headless turn in a detached process, streaming output to a per-repository log under `~/.grok/cc-plugin/jobs/`. `/grok:status` and `/grok:result` read from there.
 
@@ -154,6 +163,8 @@ Background jobs run the headless turn in a detached process, streaming output to
 | --- | --- |
 | `GROK_BIN` | Path to the `grok` binary if it isn't named `grok` on `PATH`. |
 | `GROK_CC_STATE_DIR` | Override the background-job state directory (used by tests). |
+| `GROK_SEARCH_MCP_MAX_INFLIGHT` | Max concurrent `grok_search` calls per MCP server process (default `2`). |
+| `GROK_CC_FORCE_TOOLS_ALLOWLIST` | Set to `1` to re-enable `--tools` allowlists (not recommended on CLI 0.2.x). |
 
 ## Use the search tool from any agent (MCP)
 
@@ -244,7 +255,10 @@ No. The plugin uses your local `grok` CLI authentication. If you're already sign
 No. It delegates to your local `grok` CLI on the same machine, with the same auth, config, and repository checkout.
 
 **Is the review really read-only?**
-Yes. Review and search runs are restricted to read-only tools, so Grok cannot edit files or run shell commands during them. `/grok:rescue` is write-capable by default (use `--read-only` to restrict it).
+Yes. Review and search runs strip write/shell/MCP/media tools via `--disallowed-tools`, run under `--sandbox read-only`, and disable subagents. `/grok:rescue` is write-capable by default (use `--read-only` to restrict it).
+
+**Why did `grok_search` fail with `Couldn't create session` / `run_terminal_cmd`?**
+That is the grok-cli `--tools` allowlist bug (0.2.x). Upgrade this plugin to ≥0.1.4 (denylist path). If you still see it, you are on an old install or have `GROK_CC_FORCE_TOOLS_ALLOWLIST=1` set.
 
 ## Credits
 

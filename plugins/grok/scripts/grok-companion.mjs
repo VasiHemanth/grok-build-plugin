@@ -12,7 +12,13 @@ import { fileURLToPath } from "node:url";
 import process from "node:process";
 
 import { parseArgs, normalizeEffort } from "./lib/args.mjs";
-import { getGrokAuthStatus, runGrokTurn, READ_ONLY_TOOLS } from "./lib/grok.mjs";
+import {
+  getGrokAuthStatus,
+  runGrokTurn,
+  searchTurnOptions,
+  readOnlyTurnOptions,
+  safeChildEnv
+} from "./lib/grok.mjs";
 import { collectReviewDiff } from "./lib/git.mjs";
 import { buildReviewPrompt, buildSearchPrompt } from "./lib/prompts.mjs";
 import {
@@ -201,11 +207,11 @@ async function cmdReview(cwd, flags, rest) {
     prompt += `\n\n## Reviewer focus\n${rest}`;
   }
 
-  const runOptions = {
-    model: flags.model ?? null,
-    tools: READ_ONLY_TOOLS,
-    alwaysApprove: true // read-only tools; never block on prompts
-  };
+  // Never use --tools allowlist: grok-cli 0.2.x fails session creation for
+  // many allowlists (web tools / shell). Denylist + sandbox is the safe path.
+  const runOptions = readOnlyTurnOptions({
+    model: flags.model ?? null
+  });
 
   if (flags.background) {
     const job = runBackground(cwd, { kind: "review", prompt, runOptions });
@@ -225,16 +231,21 @@ async function cmdTask(cwd, flags, rest) {
   }
 
   const readOnly = Boolean(flags["read-only"]);
-  const runOptions = {
-    model: flags.model ?? null,
-    effort: normalizeEffort(flags.effort),
-    alwaysApprove: true
-  };
-  if (readOnly) {
-    runOptions.tools = READ_ONLY_TOOLS;
-  } else {
-    runOptions.disallowedTools = [];
-  }
+  // Write-capable by default (full tool surface). --read-only uses the same
+  // denylist+sandbox profile as review/search.
+  const runOptions = readOnly
+    ? readOnlyTurnOptions({
+        model: flags.model ?? null,
+        effort: normalizeEffort(flags.effort)
+      })
+    : {
+        model: flags.model ?? null,
+        effort: normalizeEffort(flags.effort),
+        alwaysApprove: true,
+        // Still isolate vendor MCP imports so a rescue turn cannot re-enter
+        // grok_search via a host-injected MCP bridge (issue #1 class).
+        env: safeChildEnv()
+      };
 
   // Session continuity: resume the latest task session when asked.
   if (flags["resume-last"] || flags.resume) {
@@ -261,11 +272,9 @@ async function cmdSearch(cwd, flags, rest) {
     return 1;
   }
   const prompt = buildSearchPrompt(rest);
-  const runOptions = {
-    model: flags.model ?? null,
-    tools: ["web_search", "web_fetch", "read_file", "grep", "list_dir"],
-    alwaysApprove: true
-  };
+  const runOptions = searchTurnOptions({
+    model: flags.model ?? null
+  });
 
   if (flags.background) {
     const job = runBackground(cwd, { kind: "search", prompt, runOptions });
