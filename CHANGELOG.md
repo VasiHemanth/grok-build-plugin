@@ -6,6 +6,33 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-07-11
+
+### Fixed
+- **`--tools` allowlist session-creation bug** (still present on grok-cli 0.2.87–0.2.93).
+  Search/review previously passed `--tools web_search,web_fetch` (or a read-only allowlist).
+  On current CLI builds this often fails with `agent building failed: Requirements unsatisfied`
+  for `GrokBuild:run_terminal_cmd` / `auto_background_on_timeout` — so `grok_search` and
+  `/grok:search` silently died before any search ran.
+  - Plugin paths now use `--disallowed-tools` (comprehensive denylist), `--sandbox read-only`,
+    and `--no-subagents` instead of `--tools`.
+  - Allowlist via `--tools` is only emitted if `GROK_CC_FORCE_TOOLS_ALLOWLIST=1` (escape hatch).
+- **Fork-bomb hardening (issue #1 follow-up):**
+  - Child turns set `GROK_CLAUDE_MCPS_ENABLED=0`, `GROK_CURSOR_MCPS_ENABLED=0`, and the
+    recursion guard so host MCP bridges are not re-imported into the search session.
+  - Denylist also strips `use_tool` / `search_tool` (MCP bridge tools).
+  - MCP server kills in-flight process groups on `notifications/cancelled`, stdin end, SIGTERM/SIGINT.
+  - Concurrency cap (`GROK_SEARCH_MCP_MAX_INFLIGHT`, default 2) on `tools/call`.
+- Local `.mcp.json` again points at `${CLAUDE_PLUGIN_ROOT}/scripts/grok-mcp.mjs` so Claude Code
+  runs the bundled server (with these fixes) instead of only the npm package lagging behind.
+
+### Changed
+- Shared `searchTurnOptions` / `readOnlyTurnOptions` / `safeChildEnv` helpers in `lib/grok.mjs`.
+- `runCommand` spawns children in their own process group so cancel reaps MCP grandchildren.
+- Skill + rescue agent guidance: prefer `grok_search` for pure live search; rescue for write work.
+- Version bump to 0.1.4.
+
+
 ### Added
 - `grok_search` **MCP server** (`plugins/grok/scripts/grok-mcp.mjs`) exposing Grok's live X/web search to any MCP-capable agent (Claude Code, Codex, Cursor). Auto-wired for the plugin via `.mcp.json`.
 - npm `bin` + `files` so the server runs via `npx`. Initially via `github:`, then published to the registry as `grok-build-x-search-mcp` for v0.1.0.

@@ -17,7 +17,8 @@ export function binaryAvailable(binary, args, options = {}) {
     const result = spawnSync(binary, args, {
       cwd: options.cwd,
       encoding: "utf8",
-      timeout: options.timeout ?? 10_000
+      timeout: options.timeout ?? 10_000,
+      env: options.env ? { ...process.env, ...options.env } : process.env
     });
     if (result.error) {
       return { available: false, detail: result.error.message };
@@ -35,22 +36,39 @@ export function binaryAvailable(binary, args, options = {}) {
 /**
  * Run a command to completion, capturing stdout/stderr.
  * Supports an AbortSignal and an onStdoutLine callback for streaming.
+ *
+ * When `processGroup: true` (default for long agent runs), the child is the
+ * leader of a new process group so terminateProcess can reap grandchildren
+ * (e.g. MCP servers spawned by an inner `grok -p`).
  */
 export function runCommand(binary, args, options = {}) {
   return new Promise((resolve, reject) => {
+    const useGroup = options.processGroup !== false;
     const child = spawn(binary, args, {
       cwd: options.cwd,
       env: { ...process.env, ...(options.env ?? {}) },
-      stdio: ["ignore", "pipe", "pipe"]
+      stdio: ["ignore", "pipe", "pipe"],
+      // detached:true makes the child a session/process-group leader on Unix,
+      // which is what lets us kill(-pid) the whole tree on cancel.
+      detached: useGroup && process.platform !== "win32"
     });
 
     let stdout = "";
     let stderr = "";
     let stdoutBuffer = "";
+    let settled = false;
+
+    const finish = (payload) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      options.signal?.removeEventListener?.("abort", onAbort);
+      resolve({ ...payload, pid: child.pid ?? null });
+    };
 
     const onAbort = () => {
-      child.kill("SIGTERM");
-      setTimeout(() => child.kill("SIGKILL"), 2_000).unref?.();
+      terminateProcess(child.pid, { processGroup: useGroup });
     };
     if (options.signal) {
       if (options.signal.aborted) {
@@ -58,6 +76,12 @@ export function runCommand(binary, args, options = {}) {
       } else {
         options.signal.addEventListener("abort", onAbort, { once: true });
       }
+    }
+
+    try {
+      options.onSpawn?.(child.pid);
+    } catch {
+      /* ignore observer errors */
     }
 
     child.stdout.setEncoding("utf8");
@@ -83,15 +107,18 @@ export function runCommand(binary, args, options = {}) {
 
     child.on("error", (error) => {
       options.signal?.removeEventListener?.("abort", onAbort);
+      if (settled) {
+        return;
+      }
+      settled = true;
       reject(error);
     });
 
     child.on("close", (code, signal) => {
-      options.signal?.removeEventListener?.("abort", onAbort);
       if (options.onStdoutLine && stdoutBuffer.trim()) {
         options.onStdoutLine(stdoutBuffer);
       }
-      resolve({ code, signal, stdout, stderr });
+      finish({ code, signal, stdout, stderr });
     });
   });
 }
@@ -110,36 +137,39 @@ export function processAlive(pid) {
 }
 
 /**
- * Best-effort terminate a pid (SIGTERM then SIGKILL). Background workers are
- * spawned with `detached: true`, so they lead their own process group; we try
- * to signal the whole group (`-pid`) first to also reap the `grok` grandchild,
- * then fall back to the single pid.
+ * Best-effort terminate a pid (SIGTERM then SIGKILL).
+ * When the process was spawned with processGroup/detached, signal the whole
+ * group (`-pid`) first so MCP-server grandchildren die with the grok child.
  */
-function signal(pid, sig) {
-  try {
-    process.kill(-pid, sig); // process group
-    return true;
-  } catch {
+function signal(pid, sig, { processGroup = true } = {}) {
+  if (processGroup && process.platform !== "win32") {
     try {
-      process.kill(pid, sig);
+      process.kill(-pid, sig); // process group
       return true;
     } catch {
-      return false;
+      /* fall through to single-pid */
     }
+  }
+  try {
+    process.kill(pid, sig);
+    return true;
+  } catch {
+    return false;
   }
 }
 
-export function terminateProcess(pid) {
-  if (!processAlive(pid)) {
+export function terminateProcess(pid, options = {}) {
+  if (!pid || !processAlive(pid)) {
     return false;
   }
-  const sent = signal(pid, "SIGTERM");
+  const processGroup = options.processGroup !== false;
+  const sent = signal(pid, "SIGTERM", { processGroup });
   if (!sent) {
     return false;
   }
   setTimeout(() => {
     if (processAlive(pid)) {
-      signal(pid, "SIGKILL");
+      signal(pid, "SIGKILL", { processGroup });
     }
   }, 2_000).unref?.();
   return true;

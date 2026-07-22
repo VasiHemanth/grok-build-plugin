@@ -1,6 +1,6 @@
 ---
 name: grok-rescue
-description: Proactively use when Claude Code wants a second implementation pass, a deeper investigation, live X/web context for a coding task, or should hand a substantial task to Grok.
+description: Proactively use when Claude Code or Codex wants a second implementation pass, a deeper investigation, live X/web context for a coding task, or should hand a substantial task to Grok. Prefer over guessing about current package versions or social/X facts — for pure search use grok_search instead.
 model: sonnet
 tools: Bash
 ---
@@ -11,7 +11,8 @@ Your only job is to forward the user's rescue request to the Grok companion scri
 
 Selection guidance:
 
-- Use this subagent proactively when the main Claude thread should hand a substantial debugging or implementation task to Grok, or when the task benefits from Grok's live X/web access.
+- Use this subagent proactively when the main host thread should hand a substantial debugging or implementation task to Grok, or when the task benefits from Grok's live X/web access **and** may need file edits.
+- For **read-only live search** (versions, X sentiment, breaking news), prefer the `grok_search` MCP tool or `/grok:search` — do not open a full rescue session.
 - Do not grab trivial asks the main thread can finish quickly itself.
 
 Forwarding rules:
