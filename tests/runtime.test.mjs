@@ -13,6 +13,8 @@ import {
   searchTurnOptions,
   readOnlyTurnOptions,
   isToolsAllowlistBug,
+  isSandboxApplyFailure,
+  sandboxOverride,
   DANGEROUS_TOOLS,
   RECURSION_GUARD,
   safeChildEnv
@@ -121,6 +123,53 @@ test("isToolsAllowlistBug detects the known CLI failure text", () => {
     'agent building failed: tool error: Requirements unsatisfied: [RequirementError { tool: "GrokBuild:run_terminal_cmd", message: "auto_background_on_timeout requires enabled_background to be true"';
   assert.equal(isToolsAllowlistBug(sample), true);
   assert.equal(isToolsAllowlistBug("ordinary stderr"), false);
+});
+
+test("sandboxOverride reads GROK_CC_SANDBOX and defaults to read-only", () => {
+  const prev = process.env.GROK_CC_SANDBOX;
+  try {
+    delete process.env.GROK_CC_SANDBOX;
+    assert.deepEqual(sandboxOverride(), { set: false, sandbox: "read-only" });
+
+    process.env.GROK_CC_SANDBOX = "off";
+    assert.deepEqual(sandboxOverride(), { set: true, sandbox: null });
+
+    process.env.GROK_CC_SANDBOX = "workspace";
+    assert.deepEqual(sandboxOverride(), { set: true, sandbox: "workspace" });
+
+    process.env.GROK_CC_SANDBOX = "readonly";
+    assert.deepEqual(sandboxOverride(), { set: true, sandbox: "read-only" });
+
+    process.env.GROK_CC_SANDBOX = "bogus";
+    assert.deepEqual(sandboxOverride(), { set: false, sandbox: "read-only" });
+  } finally {
+    if (prev === undefined) delete process.env.GROK_CC_SANDBOX;
+    else process.env.GROK_CC_SANDBOX = prev;
+  }
+});
+
+test("GROK_CC_SANDBOX override controls searchTurnOptions", () => {
+  const prev = process.env.GROK_CC_SANDBOX;
+  try {
+    process.env.GROK_CC_SANDBOX = "off";
+    assert.equal(searchTurnOptions().sandbox, undefined);
+    process.env.GROK_CC_SANDBOX = "workspace";
+    assert.equal(searchTurnOptions().sandbox, "workspace");
+    delete process.env.GROK_CC_SANDBOX;
+    assert.equal(searchTurnOptions().sandbox, "read-only");
+  } finally {
+    if (prev === undefined) delete process.env.GROK_CC_SANDBOX;
+    else process.env.GROK_CC_SANDBOX = prev;
+  }
+});
+
+test("isSandboxApplyFailure detects the macOS symlink socket refusal", () => {
+  const sample =
+    "warning: sandbox could not be applied: socket deny resolution failed: could not resolve runtime-socket deny path /var/run/docker.sock: endpoint is a symlink\n" +
+    "error: could not apply the 'read-only' sandbox profile; see the warning above for the cause. Refusing to start with its protections missing.";
+  assert.equal(isSandboxApplyFailure(sample), true);
+  assert.equal(isSandboxApplyFailure("ordinary stderr"), false);
+  assert.equal(isSandboxApplyFailure(""), false);
 });
 
 test("job write/read roundtrip and listing are per-cwd", () => {
