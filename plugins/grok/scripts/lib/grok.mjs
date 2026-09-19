@@ -77,6 +77,48 @@ export function safeChildEnv(extra = {}) {
 }
 
 /**
+ * Optional operator override for the sandbox profile on safe (read-only /
+ * search) turns. Recognized values: `read-only`, `workspace`, `strict`, `off`
+ * (aliases: `readonly`, `none`, `false`). Unset means the default `read-only`
+ * with automatic fallback when the profile cannot be applied on this host.
+ * When set, the value is honored exactly and no fallback is attempted.
+ * @returns {{ set: boolean, sandbox: string|null }}
+ */
+export function sandboxOverride() {
+  const raw = String(process.env.GROK_CC_SANDBOX ?? "").trim().toLowerCase();
+  if (!raw) {
+    return { set: false, sandbox: "read-only" };
+  }
+  if (raw === "off" || raw === "none" || raw === "false") {
+    return { set: true, sandbox: null };
+  }
+  if (raw === "readonly") {
+    return { set: true, sandbox: "read-only" };
+  }
+  if (raw === "read-only" || raw === "workspace" || raw === "strict") {
+    return { set: true, sandbox: raw };
+  }
+  return { set: false, sandbox: "read-only" };
+}
+
+/**
+ * Detect a sandbox-application failure from the grok CLI. On macOS a symlinked
+ * runtime socket such as `/var/run/docker.sock` makes the CLI refuse to start
+ * under `read-only`/`strict` rather than run with protections missing.
+ */
+export function isSandboxApplyFailure(text) {
+  if (!text) {
+    return false;
+  }
+  return (
+    /sandbox could not be applied/i.test(text) ||
+    /could not apply the ['"]?[\w-]+['"]? sandbox profile/i.test(text) ||
+    /socket deny resolution failed/i.test(text) ||
+    /could not resolve runtime-socket deny path/i.test(text)
+  );
+}
+
+/**
  * Options for a live X/web search turn: denylist + sandbox + no subagents.
  * Prefer this over an allowlist (`--tools`) on current CLI versions.
  */
@@ -97,11 +139,12 @@ export function readOnlyTurnOptions(overrides = {}) {
  */
 function buildSafeTurnOptions(overrides = {}) {
   const cleaned = stripToolAllowlist(overrides);
-  const { env: extraEnv, disallowedTools, ...rest } = cleaned;
+  const { env: extraEnv, disallowedTools, sandbox: _ignoredSandbox, ...rest } = cleaned;
+  const { sandbox } = sandboxOverride();
   return {
     alwaysApprove: true,
     noSubagents: true,
-    sandbox: "read-only",
+    ...(sandbox ? { sandbox } : {}),
     ...rest,
     // Callers may extend the denylist; they cannot shrink the default set
     // without passing an explicit full list via disallowedTools.
@@ -332,6 +375,35 @@ export async function runGrokTurn(cwd, options = {}) {
     throw new Error(availability.detail);
   }
 
+  const result = await runGrokTurnOnce(cwd, options);
+
+  // A requested sandbox profile can fail to apply on some hosts (e.g. a
+  // symlinked runtime socket such as /var/run/docker.sock on macOS). The CLI
+  // refuses to start, so no turn ran; retrying on `workspace` keeps the turn
+  // alive while still confining writes. An explicit GROK_CC_SANDBOX is
+  // honored exactly, so operators who require read-only can opt out of this.
+  const override = sandboxOverride();
+  const requested = options.sandbox;
+  if (
+    !override.set &&
+    requested &&
+    requested !== "workspace" &&
+    result.status !== 0 &&
+    isSandboxApplyFailure(`${result.stderr}\n${result.stdout ?? ""}`)
+  ) {
+    const retried = await runGrokTurnOnce(cwd, { ...options, sandbox: "workspace" });
+    const note =
+      `[grok plugin] sandbox "${requested}" could not be applied on this host; ` +
+      'retried with "workspace". Set GROK_CC_SANDBOX=read-only to fail instead, ' +
+      "or GROK_CC_SANDBOX=off to disable the sandbox.";
+    retried.stderr = [note, retried.stderr].filter(Boolean).join("\n");
+    return retried;
+  }
+
+  return result;
+}
+
+async function runGrokTurnOnce(cwd, options = {}) {
   const prompt = (options.prompt ?? "").trim() || options.defaultPrompt || DEFAULT_CONTINUE_PROMPT;
   const streaming = Boolean(options.onProgress);
   const args = buildHeadlessArgs(prompt, { ...options, streaming });
@@ -437,6 +509,7 @@ export async function runGrokTurn(cwd, options = {}) {
     requestId,
     thought: thought ?? null,
     stderr: friendlyStderr,
+    stdout: stdout ?? "",
     args,
     pid: pid ?? null
   };
